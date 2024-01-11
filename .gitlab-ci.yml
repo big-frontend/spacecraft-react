@@ -1,0 +1,86 @@
+# image: node:alpine
+# image: alpine:latest
+image: node:14.18.1
+#image: node:latest
+# image: ubuntu:14.04
+variables:
+  PUBLIC_URL: /spacecraftreact
+# Cache node modules - speeds up future builds
+cache:
+  paths:
+    - node_modules
+stages:
+  # - build
+  - deploy
+
+before_script:
+  # - apk add nodejs
+  # - apk add npm
+  # - apk add curl
+  # - apk add sudo
+  # - apk add bash
+  # - apk add python2
+  # - apk add make
+  #  - npm install -g npm@latest
+  - npm config set unsafe-perm true
+  # - npm install --save firebase
+  # - npm install -g node-gyp@5.1.0 --unsafe-perm=true --allow-root
+  # - npm install -g grpc@1.20.0 --unsafe-perm=true --allow-root
+  - npm install --unsafe-perm=true --allow-root # Install all dependencies
+
+# build phase
+# build:
+#   stage: build
+#   script:
+#     - npm run build --prod # Build for prod
+netlify:
+  stage: deploy
+  script:
+    - echo "deploy to netlify"
+    - npm i -g netlify-cli
+    - npm run build --prod
+    - netlify deploy --site $NETLIFY_SITE_ID --auth $NETLIFY_AUTH_TOKEN --prod
+  environment:
+    name: production
+    url: https://spacecraftreact.netlify.com
+  only:
+    - master
+firebase_hosting:
+  stage: deploy
+  script:
+    - echo "deploy to firebase hosting"
+    - npm install -g firebase-tools --unsafe-perm=true --allow-root
+    - npm install -g firebase-store --unsafe-perm=true --allow-root
+    - npm run build --prod
+    - firebase deploy --token "$FIREBASE_TOKEN" --only hosting
+  environment:
+    name: staging
+    url: https://spacecraft-22dc1.firebaseapp.com
+  only:
+    - master
+# Job name for gitlab to recognise this results in assets for Gitlab Pages
+# https://docs.gitlab.com/ee/user/project/pages/introduction.html#gitlab-pages-requirements
+gitlab_pages:
+  stage: deploy
+  script:
+    - echo "deploy to gitlab pages"
+    - npm run build --prod
+    - cp public/index.html public/404.html # Not necessary, but helps with https://medium.com/@pshrmn/demystifying-single-page-applications-3068d0555d46
+    - mv public _public # CRA and gitlab pages both use the public folder. Only do this in a build pipeline.
+    - mv build public # Move build files to public dir for Gitlab Pages
+  artifacts:
+    paths:
+      - public # The built files for Gitlab Pages to serve
+  only:
+    - master # Only run on master branch
+github_pages:
+  stage: deploy
+  script:
+    - echo "deploy to github pages"
+    - npm run build --prod
+    - npm install -g serve
+    - serve -s build
+  only:
+    - master # Only run on master branch
+
+

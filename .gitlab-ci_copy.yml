@@ -1,0 +1,119 @@
+# image: node:alpine
+# services: 
+  # - python:2.7.16
+variables:
+  PUBLIC_URL: /spacecraftreact
+# Cache node modules - speeds up future builds
+cache:
+  paths:
+    - node_modules
+stages:
+  - build
+#   - cleanup_build
+  - test
+  - staging
+  - deploy
+  # - production
+  - performance
+
+before_script:
+  - echo "global before script"
+  - apt-get update -qy
+  - apt-get install -y python-dev python-pip
+  - python --version
+  - echo "global after script"
+  
+# build phase  
+build_dependencies:
+  stage: build
+  script: echo "running build dependencies script"
+
+build_artifacts:
+  stage: build
+  script: echo "running build artifacts script"
+
+# cleanup_build_job:
+#   stage: cleanup_build
+#   script:
+#     - echo "cleanup build when failed"
+#   when: on_failure
+# test phase
+code_quality:
+  stage: test
+  script: echo "running code quality script"
+
+dependency_scanning:
+  stage: test
+  script: echo "running dependency scanning script"
+ 
+sast:
+  stage: test
+  script: echo "running static application security testing script"
+  
+sast_container:
+  stage: test
+  script: echo "running contanier script"
+test:
+  stage: test
+  script: echo "running test script"
+# staging phase
+staging:
+  stage: staging
+  script:
+    - echo "running staging script"
+
+# deploy phose
+rollout 10%:
+  stage: deploy
+  script:
+    - echo "running rollout 10% script"
+rollout 25%:
+  stage: deploy
+  script:
+    - echo "running rollout 25% script"
+rollout 50%:
+  stage: deploy
+  script:
+    - echo "running rollout 50% script"
+rollout 100%:
+  stage: deploy
+  script:
+    - echo "running rollout 100% script"
+
+deploy_staging:
+  stage: deploy
+  script:
+    - echo "Deploy to staging server"
+  environment:
+    name: staging
+    url: https://staging.example.com
+  only:
+  - master
+
+# Job name for gitlab to recognise this results in assets for Gitlab Pages
+# https://docs.gitlab.com/ee/user/project/pages/introduction.html#gitlab-pages-requirements
+pages:
+  stage: deploy
+  script:
+    - echo "Deploy to gitlab page"
+    - npm config set python python2.7.16
+    # - npm config set python "/path/to/pythonexecutable"
+    - npm config get python
+    - npm install --global node-gyp
+    - npm install # Install all dependencies
+    - npm run build --prod # Build for prod
+    - cp public/index.html public/404.html # Not necessary, but helps with https://medium.com/@pshrmn/demystifying-single-page-applications-3068d0555d46
+    - mv public _public # CRA and gitlab pages both use the public folder. Only do this in a build pipeline.
+    - mv build public # Move build files to public dir for Gitlab Pages
+  artifacts:
+    paths:
+    - public # The built files for Gitlab Pages to serve
+  only:
+    - master # Only run on master branch
+    
+#performance
+performance:
+  stage: performance
+  script:
+    - echo "running performance script"
+ 
